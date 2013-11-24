@@ -19,10 +19,11 @@ public class PollingEvent {
 
 	private void convert(byte[] registers) {
 		for (int i = 0; i < 15; i++) {
-			values[i] = registers[i * 2 + 1] << 8 | registers[i * 2];
+			values[i] = (registers[i * 2 + 1] & 0xFF) << 8
+					| (registers[i * 2] & 0xFF);
 		}
 		for (int i = 15; i < 28; i++) {
-			values[i] = registers[i + 14];
+			values[i] = (registers[i + 14] & 0xFF);
 		}
 	}
 
