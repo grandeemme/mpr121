@@ -1,12 +1,13 @@
 package com.mauromiranda.mpr121.test;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.util.Properties;
 
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-
+import com.jogamp.openal.sound3d.AudioSystem3D;
+import com.jogamp.openal.sound3d.Context;
+import com.jogamp.openal.sound3d.Device;
+import com.jogamp.openal.sound3d.Listener;
+import com.jogamp.openal.sound3d.Source;
 import com.mauromiranda.mpr121.Mpr121;
 import com.mauromiranda.mpr121.event.PollingEvent;
 import com.mauromiranda.mpr121.event.TouchEvent;
@@ -28,13 +29,39 @@ public class Mpr121Test {
 			System.out.println("Start mpr121");
 
 			final I2CBus bus = I2CFactory.getInstance(I2CBus.BUS_1);
-			Mpr121 mpr = new Mpr121(0x5A, bus, 100);
+			Mpr121 mpr = new Mpr121(0x5A, bus);
 
-			final Clip clip1 = AudioSystem.getClip();
-			clip1.open(AudioSystem.getAudioInputStream(new File(prop.getProperty("beep1"))));
+			AudioSystem3D.init();
+		
+			// create the initial context - this can be collapsed into the init.
+			Device device = AudioSystem3D.openDevice(null);
+			if(device == null){
+				System.out.println("Device is null");
+				return;
+			}
+			Context context = AudioSystem3D.createContext(device);
+			AudioSystem3D.makeContextCurrent(context);
 
-			final Clip clip2 = AudioSystem.getClip();
-			clip2.open(AudioSystem.getAudioInputStream(new File(prop.getProperty("beep2"))));
+			// get the listener object
+			Listener listener = AudioSystem3D.getListener();
+			listener.setPosition(0, 0, 0);
+
+			// load a source and play it
+			final Source source1 = AudioSystem3D.loadSource(new FileInputStream(prop.getProperty("beep1")));
+			source1.setPosition(0, 0, 0);
+			source1.setLooping(true);
+
+			final Source source2 = AudioSystem3D.loadSource(new FileInputStream(prop.getProperty("beep2")));
+			source2.setPosition(0, 0, 0);
+			source2.setLooping(true);
+
+			final Source source3 = AudioSystem3D.loadSource(new FileInputStream(prop.getProperty("beep4")));
+			source3.setPosition(0, 0, 0);
+			source3.setLooping(true);
+
+			final Source source4 = AudioSystem3D.loadSource(new FileInputStream(prop.getProperty("beep4")));
+			source4.setPosition(0, 0, 0);
+			source4.setLooping(true);
 
 			mpr.addTouchListener(new TouchListener() {
 
@@ -43,16 +70,16 @@ public class Mpr121Test {
 					System.out.println("pin " + e.getElectrode().ordinal() + " was just touched");
 					switch (e.getElectrode()) {
 					case EL0:
-						clip1.start();
+						source1.play();
 						break;
 					case EL1:
-						clip2.start();
+						source2.play();
 						break;
 					case EL2:
-
+						source3.play();
 						break;
 					case EL3:
-
+						source4.play();
 						break;
 					default:
 						break;
@@ -66,18 +93,16 @@ public class Mpr121Test {
 
 					switch (e.getElectrode()) {
 					case EL0:
-						clip1.stop();
-						clip1.setFramePosition(0);
+						source1.stop();
 						break;
 					case EL1:
-						clip2.stop();
-						clip2.setFramePosition(0);
+						source2.stop();
 						break;
 					case EL2:
-
+						source3.stop();
 						break;
 					case EL3:
-
+						source4.stop();
 						break;
 					default:
 						break;
@@ -100,7 +125,6 @@ public class Mpr121Test {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 
 }

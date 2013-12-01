@@ -5,13 +5,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
 import java.util.TimerTask;
 
 import com.mauromiranda.mpr121.event.PollingEvent;
 import com.mauromiranda.mpr121.event.TouchEvent;
 import com.mauromiranda.mpr121.listener.PollingListener;
 import com.mauromiranda.mpr121.listener.TouchListener;
+import com.pi4j.io.gpio.GpioController;
+import com.pi4j.io.gpio.GpioFactory;
+import com.pi4j.io.gpio.GpioPinDigitalInput;
+import com.pi4j.io.gpio.PinPullResistance;
+import com.pi4j.io.gpio.RaspiPin;
+import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
+import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 import com.pi4j.io.i2c.I2CBus;
 import com.pi4j.io.i2c.I2CDevice;
 
@@ -31,17 +37,75 @@ public class Mpr121 implements Constants {
 
 	protected I2CDevice device;
 
-	protected Timer timer = new Timer();
+	protected GpioController gpio;
 
-	protected long polling;
+	protected GpioPinDigitalInput interrupt;
 
-	public Mpr121(int address, I2CBus bus, long polling) throws IOException {
+	boolean[] touchStates = new boolean[12];
+
+	public Mpr121(int address, I2CBus bus) throws IOException {
 		singleListeners = new HashMap<Electrode, List<TouchListener>>();
 		touchListeners = new ArrayList<TouchListener>();
 		pollingListeners = new ArrayList<PollingListener>();
 		// mi collego al
 		device = bus.getDevice(address);
-		this.polling = polling;
+	}
+
+	/**
+	 * Start campioning values
+	 * 
+	 * @throws IOException
+	 */
+	public void start() throws IOException {
+		setup();
+		// create gpio controller
+		gpio = GpioFactory.getInstance();
+
+		// provision gpio pin #02 as an input pin with its internal pull down resistor enabled
+		interrupt = gpio.provisionDigitalInputPin(RaspiPin.GPIO_02, PinPullResistance.PULL_DOWN);
+
+		// create and register gpio pin listener
+		interrupt.addListener(new GpioPinListenerDigital() {
+			@Override
+			public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
+				// display pin state on console
+				System.out.println(" --> GPIO PIN STATE CHANGE: " + event.getPin() + " = " + event.getState());
+
+				try {
+					byte[] reisters = new byte[42];
+					device.read(reisters, 0, 42);
+					// notifico la lettura dei registri
+					notifyPolling(reisters);
+
+					byte LSB = reisters[0];
+					byte MSB = reisters[1];
+					//
+					int touched = ((MSB << 8) | LSB);
+					// controllo i primi 8
+					for (int i = 0; i < 12; i++) {
+						if ((touched & (1 << i)) != 0x00) {
+							if (!touchStates[i]) {
+								// pin i was just touched
+								notifyTouch(Electrode.values()[i]);
+							} else {
+								// pin i is still being touched
+							}
+							touchStates[i] = true;
+						} else {
+							if (touchStates[i]) {
+								notifyRelease(Electrode.values()[i]);
+								// pin i is no longer being touched
+							}
+							touchStates[i] = false;
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+		});
+
 	}
 
 	public void setup() throws IOException {
@@ -95,7 +159,7 @@ public class Mpr121 implements Constants {
 
 		set_register(ELE11_T, TOU_THRESH);
 		set_register(ELE11_R, REL_THRESH);
-		
+
 		set_register(ELE12_T, TOU_THRESH);
 		set_register(ELE12_R, REL_THRESH);
 
@@ -112,9 +176,8 @@ public class Mpr121 implements Constants {
 		// Section F
 		// Enable Auto Config and auto Reconfig
 		/*
-		 * set_register( ATO_CFG0, 0x0B); set_register( ATO_CFGU, 0xC9); // USL
-		 * = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V set_register( ATO_CFGL, 0x82); //
-		 * LSL = 0.65*USL = 0x82 @3.3V set_register( ATO_CFGT, 0xB5);
+		 * set_register( ATO_CFG0, 0x0B); set_register( ATO_CFGU, 0xC9); // USL = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V
+		 * set_register( ATO_CFGL, 0x82); // LSL = 0.65*USL = 0x82 @3.3V set_register( ATO_CFGT, 0xB5);
 		 */// Target = 0.9*USL = 0xB5 @3.3V
 
 		set_register(ELE_CFG, (byte) 0x1C);
@@ -124,19 +187,8 @@ public class Mpr121 implements Constants {
 		device.write(new byte[] { address, value }, 0, 2);
 	}
 
-	/**
-	 * Start campioning values
-	 * 
-	 * @throws IOException
-	 */
-	public void start() throws IOException {
-		setup();
-		// avvio il polling ogni 100 millisecondi
-		timer.schedule(new PollingTimer(), 1, polling);
-	}
-
 	public void stop() {
-		timer.purge();
+		gpio.removeAllListeners();
 	}
 
 	public void addTouchListener(TouchListener l) {
@@ -179,41 +231,9 @@ public class Mpr121 implements Constants {
 
 	protected class PollingTimer extends TimerTask {
 
-		boolean[] touchStates = new boolean[12];
-
 		@Override
 		public void run() {
-			try {
-				byte[] reisters = new byte[42];
-				device.read(reisters, 0, 42);
-				//notifico la lettura dei registri
-				notifyPolling(reisters);
-				
-				byte LSB = reisters[0];
-				byte MSB = reisters[1];
-				//
-				int touched = ((MSB << 8) | LSB);
-				// controllo i primi 8
-				for (int i = 0; i < 12; i++) {
-					if ((touched & (1 << i)) != 0x00) {
-						if (!touchStates[i]) {
-							// pin i was just touched
-							notifyTouch(Electrode.values()[i]);
-						} else {
-							// pin i is still being touched
-						}
-						touchStates[i] = true;
-					} else {
-						if (touchStates[i]) {
-							notifyRelease(Electrode.values()[i]);
-							// pin i is no longer being touched
-						}
-						touchStates[i] = false;
-					}
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+
 		}
 	}
 }
