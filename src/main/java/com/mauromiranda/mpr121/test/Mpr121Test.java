@@ -122,6 +122,10 @@ public class Mpr121Test {
 				}
 			});
 			mpr.start();
+			
+			synchronized (mpr) {
+				mpr.wait();
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
