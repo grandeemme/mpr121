@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.mauromiranda.mpr121.event.PollingEvent;
 import com.mauromiranda.mpr121.event.TouchEvent;
@@ -42,12 +45,15 @@ public class Mpr121 implements Constants {
 	protected GpioPinDigitalInput interrupt;
 
 	boolean[] touchStates = new boolean[12];
+	
+	protected Lock lock = new ReentrantLock();
 
 	protected byte touchThreshold = TOU_THRESH;
 	protected byte releaseRhreshold = REL_THRESH;
 
 	public Mpr121(int address, I2CBus bus, byte touchThreshold, byte releaseRhreshold) throws IOException {
 		this(address, bus);
+		System.out.println("Mpr121 Strat with: touchThreshold " + touchThreshold + " releaseRhreshold " + releaseRhreshold);
 		this.touchThreshold = touchThreshold;
 		this.releaseRhreshold = releaseRhreshold;
 	}
@@ -66,6 +72,7 @@ public class Mpr121 implements Constants {
 	 * @throws IOException
 	 */
 	public void start() throws IOException {
+		System.out.println("Mpr121 initialize");
 		setup();
 		// create gpio controller
 		gpio = GpioFactory.getInstance();
@@ -81,6 +88,7 @@ public class Mpr121 implements Constants {
 				System.out.println(" --> GPIO PIN STATE CHANGE: " + event.getPin() + " = " + event.getState());
 
 				try {
+					lock.tryLock(100,TimeUnit.MILLISECONDS);
 					byte[] reisters = new byte[42];
 					device.read(reisters, 0, 42);
 					// notifico la lettura dei registri
@@ -110,11 +118,14 @@ public class Mpr121 implements Constants {
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
+				}finally{
+					lock.unlock();
 				}
 			}
 
 		});
 
+		System.out.println("Mpr121 initialized");
 	}
 
 	public void setup() throws IOException {
@@ -189,7 +200,6 @@ public class Mpr121 implements Constants {
 		 * set_register( ATO_CFGL, 0x82); // LSL = 0.65*USL = 0x82 @3.3V set_register( ATO_CFGT, 0xB5);
 		 */// Target = 0.9*USL = 0xB5 @3.3V
 
-		set_register(ELE_CFG, (byte) 0x1C);
 	}
 
 	private void set_register(byte address, byte value) throws IOException {

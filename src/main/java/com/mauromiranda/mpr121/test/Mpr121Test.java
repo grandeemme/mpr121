@@ -35,8 +35,7 @@ public class Mpr121Test {
 
 			Mpr121 mpr = null;
 			if (touchThreshold != null && releaseRhreshold != null) {
-				System.out.println("Mpr121 Strat with: touchThreshold " + touchThreshold + " releaseRhreshold " + releaseRhreshold);
-				mpr = new Mpr121(0x5A, bus, Byte.parseByte(touchThreshold,16), Byte.parseByte(releaseRhreshold,16));
+					mpr = new Mpr121(0x5A, bus, Byte.parseByte(touchThreshold,16), Byte.parseByte(releaseRhreshold,16));
 			} else {
 				mpr = new Mpr121(0x5A, bus);
 			}
