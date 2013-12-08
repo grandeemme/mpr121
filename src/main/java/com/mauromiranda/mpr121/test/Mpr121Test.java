@@ -26,16 +26,26 @@ public class Mpr121Test {
 			final Properties prop = new Properties();
 			prop.load(new FileInputStream("config.properties"));
 
+			String touchThreshold = prop.getProperty("touchThreshold");
+			String releaseRhreshold = prop.getProperty("releaseRhreshold");
+
 			System.out.println("Start mpr121");
 
 			final I2CBus bus = I2CFactory.getInstance(I2CBus.BUS_1);
-			Mpr121 mpr = new Mpr121(0x5A, bus);
+
+			Mpr121 mpr = null;
+			if (touchThreshold != null && releaseRhreshold != null) {
+				System.out.println("Mpr121 Strat with: touchThreshold " + touchThreshold + " releaseRhreshold " + releaseRhreshold);
+				mpr = new Mpr121(0x5A, bus, Byte.parseByte(touchThreshold,16), Byte.parseByte(releaseRhreshold,16));
+			} else {
+				mpr = new Mpr121(0x5A, bus);
+			}
 
 			AudioSystem3D.init();
-		
+
 			// create the initial context - this can be collapsed into the init.
 			Device device = AudioSystem3D.openDevice(null);
-			if(device == null){
+			if (device == null) {
 				System.out.println("Device is null");
 				return;
 			}
@@ -55,7 +65,7 @@ public class Mpr121Test {
 			source2.setPosition(0, 0, 0);
 			source2.setLooping(true);
 
-			final Source source3 = AudioSystem3D.loadSource(new FileInputStream(prop.getProperty("beep4")));
+			final Source source3 = AudioSystem3D.loadSource(new FileInputStream(prop.getProperty("beep3")));
 			source3.setPosition(0, 0, 0);
 			source3.setLooping(true);
 
@@ -122,6 +132,9 @@ public class Mpr121Test {
 				}
 			});
 			mpr.start();
+			synchronized (mpr) {
+				mpr.wait();
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

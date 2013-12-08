@@ -43,6 +43,15 @@ public class Mpr121 implements Constants {
 
 	boolean[] touchStates = new boolean[12];
 
+	protected byte touchThreshold = TOU_THRESH;
+	protected byte releaseRhreshold = REL_THRESH;
+
+	public Mpr121(int address, I2CBus bus, byte touchThreshold, byte releaseRhreshold) throws IOException {
+		this(address, bus);
+		this.touchThreshold = touchThreshold;
+		this.releaseRhreshold = releaseRhreshold;
+	}
+
 	public Mpr121(int address, I2CBus bus) throws IOException {
 		singleListeners = new HashMap<Electrode, List<TouchListener>>();
 		touchListeners = new ArrayList<TouchListener>();
@@ -124,44 +133,44 @@ public class Mpr121 implements Constants {
 		set_register(FDL_F, (byte) 0x02);
 
 		// Section C - Sets touch and release thresholds for each electrode
-		set_register(ELE0_T, TOU_THRESH);
-		set_register(ELE0_R, REL_THRESH);
+		set_register(ELE0_T, touchThreshold);
+		set_register(ELE0_R, releaseRhreshold);
 
-		set_register(ELE1_T, TOU_THRESH);
-		set_register(ELE1_R, REL_THRESH);
+		set_register(ELE1_T, touchThreshold);
+		set_register(ELE1_R, releaseRhreshold);
 
-		set_register(ELE2_T, TOU_THRESH);
-		set_register(ELE2_R, REL_THRESH);
+		set_register(ELE2_T, touchThreshold);
+		set_register(ELE2_R, releaseRhreshold);
 
-		set_register(ELE3_T, TOU_THRESH);
-		set_register(ELE3_R, REL_THRESH);
+		set_register(ELE3_T, touchThreshold);
+		set_register(ELE3_R, releaseRhreshold);
 
-		set_register(ELE4_T, TOU_THRESH);
-		set_register(ELE4_R, REL_THRESH);
+		set_register(ELE4_T, touchThreshold);
+		set_register(ELE4_R, releaseRhreshold);
 
-		set_register(ELE5_T, TOU_THRESH);
-		set_register(ELE5_R, REL_THRESH);
+		set_register(ELE5_T, touchThreshold);
+		set_register(ELE5_R, releaseRhreshold);
 
-		set_register(ELE6_T, TOU_THRESH);
-		set_register(ELE6_R, REL_THRESH);
+		set_register(ELE6_T, touchThreshold);
+		set_register(ELE6_R, releaseRhreshold);
 
-		set_register(ELE7_T, TOU_THRESH);
-		set_register(ELE7_R, REL_THRESH);
+		set_register(ELE7_T, touchThreshold);
+		set_register(ELE7_R, releaseRhreshold);
 
-		set_register(ELE8_T, TOU_THRESH);
-		set_register(ELE8_R, REL_THRESH);
+		set_register(ELE8_T, touchThreshold);
+		set_register(ELE8_R, releaseRhreshold);
 
-		set_register(ELE9_T, TOU_THRESH);
-		set_register(ELE9_R, REL_THRESH);
+		set_register(ELE9_T, touchThreshold);
+		set_register(ELE9_R, releaseRhreshold);
 
-		set_register(ELE10_T, TOU_THRESH);
-		set_register(ELE10_R, REL_THRESH);
+		set_register(ELE10_T, touchThreshold);
+		set_register(ELE10_R, releaseRhreshold);
 
-		set_register(ELE11_T, TOU_THRESH);
-		set_register(ELE11_R, REL_THRESH);
+		set_register(ELE11_T, touchThreshold);
+		set_register(ELE11_R, releaseRhreshold);
 
-		set_register(ELE12_T, TOU_THRESH);
-		set_register(ELE12_R, REL_THRESH);
+		set_register(ELE12_T, touchThreshold);
+		set_register(ELE12_R, releaseRhreshold);
 
 		// Section D
 		// Set the Filter Configuration
