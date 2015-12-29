@@ -17,6 +17,7 @@ import com.mauromiranda.mpr121.listener.TouchListener;
 import com.pi4j.io.gpio.GpioController;
 import com.pi4j.io.gpio.GpioFactory;
 import com.pi4j.io.gpio.GpioPinDigitalInput;
+import com.pi4j.io.gpio.Pin;
 import com.pi4j.io.gpio.PinPullResistance;
 import com.pi4j.io.gpio.RaspiPin;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
@@ -45,25 +46,31 @@ public class Mpr121 implements Constants {
 	protected GpioPinDigitalInput interrupt;
 
 	boolean[] touchStates = new boolean[12];
-	
+
 	protected Lock lock = new ReentrantLock();
+
+	protected Pin gpioInterrupt;
 
 	protected byte touchThreshold = TOU_THRESH;
 	protected byte releaseRhreshold = REL_THRESH;
 
-	public Mpr121(int address, I2CBus bus, byte touchThreshold, byte releaseRhreshold) throws IOException {
-		this(address, bus);
-		System.out.println("Mpr121 Strat with: touchThreshold " + touchThreshold + " releaseRhreshold " + releaseRhreshold);
+	public Mpr121(int address, I2CBus bus, Pin gpioInterrupt, byte touchThreshold, byte releaseRhreshold)
+			throws IOException {
+		this(address, bus, gpioInterrupt);
+		System.out.println(
+				"Mpr121 Strat with: touchThreshold " + touchThreshold + " releaseRhreshold " + releaseRhreshold);
 		this.touchThreshold = touchThreshold;
 		this.releaseRhreshold = releaseRhreshold;
+
 	}
 
-	public Mpr121(int address, I2CBus bus) throws IOException {
+	public Mpr121(int address, I2CBus bus, Pin gpioInterrupt) throws IOException {
 		singleListeners = new HashMap<Electrode, List<TouchListener>>();
 		touchListeners = new ArrayList<TouchListener>();
 		pollingListeners = new ArrayList<PollingListener>();
 		// mi collego al
 		device = bus.getDevice(address);
+		this.gpioInterrupt = gpioInterrupt;
 	}
 
 	/**
@@ -77,8 +84,9 @@ public class Mpr121 implements Constants {
 		// create gpio controller
 		gpio = GpioFactory.getInstance();
 
-		// provision gpio pin #02 as an input pin with its internal pull down resistor enabled
-		interrupt = gpio.provisionDigitalInputPin(RaspiPin.GPIO_02, PinPullResistance.PULL_DOWN);
+		// provision gpio pin #02 as an input pin with its internal pull down
+		// resistor enabled
+		interrupt = gpio.provisionDigitalInputPin(gpioInterrupt, PinPullResistance.PULL_DOWN);
 
 		// create and register gpio pin listener
 		interrupt.addListener(new GpioPinListenerDigital() {
@@ -88,7 +96,7 @@ public class Mpr121 implements Constants {
 				System.out.println(" --> GPIO PIN STATE CHANGE: " + event.getPin() + " = " + event.getState());
 
 				try {
-					lock.tryLock(100,TimeUnit.MILLISECONDS);
+					lock.tryLock(100, TimeUnit.MILLISECONDS);
 					byte[] reisters = new byte[42];
 					device.read(reisters, 0, 42);
 					// notifico la lettura dei registri
@@ -118,7 +126,7 @@ public class Mpr121 implements Constants {
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
-				}finally{
+				} finally {
 					lock.unlock();
 				}
 			}
@@ -196,8 +204,9 @@ public class Mpr121 implements Constants {
 		// Section F
 		// Enable Auto Config and auto Reconfig
 		/*
-		 * set_register( ATO_CFG0, 0x0B); set_register( ATO_CFGU, 0xC9); // USL = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V
-		 * set_register( ATO_CFGL, 0x82); // LSL = 0.65*USL = 0x82 @3.3V set_register( ATO_CFGT, 0xB5);
+		 * set_register( ATO_CFG0, 0x0B); set_register( ATO_CFGU, 0xC9); // USL
+		 * = (Vdd-0.7)/vdd*256 = 0xC9 @3.3V set_register( ATO_CFGL, 0x82); //
+		 * LSL = 0.65*USL = 0x82 @3.3V set_register( ATO_CFGT, 0xB5);
 		 */// Target = 0.9*USL = 0xB5 @3.3V
 
 	}

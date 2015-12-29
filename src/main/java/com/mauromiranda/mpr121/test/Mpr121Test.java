@@ -8,6 +8,7 @@ import com.mauromiranda.mpr121.event.PollingEvent;
 import com.mauromiranda.mpr121.event.TouchEvent;
 import com.mauromiranda.mpr121.listener.PollingListener;
 import com.mauromiranda.mpr121.listener.TouchListener;
+import com.pi4j.io.gpio.RaspiPin;
 import com.pi4j.io.i2c.I2CBus;
 import com.pi4j.io.i2c.I2CFactory;
 
@@ -30,9 +31,10 @@ public class Mpr121Test {
 
 			Mpr121 mpr = null;
 			if (touchThreshold != null && releaseRhreshold != null) {
-				mpr = new Mpr121(0x5A, bus, Byte.parseByte(touchThreshold, 16), Byte.parseByte(releaseRhreshold, 16));
+				mpr = new Mpr121(0x5A, bus, RaspiPin.GPIO_07, Byte.parseByte(touchThreshold, 16),
+						Byte.parseByte(releaseRhreshold, 16));
 			} else {
-				mpr = new Mpr121(0x5A, bus);
+				mpr = new Mpr121(0x5A, bus, RaspiPin.GPIO_07);
 			}
 
 			mpr.addTouchListener(new TouchListener() {
