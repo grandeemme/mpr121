@@ -65,7 +65,7 @@
 		<dependency>
 			<groupId>com.pi4j</groupId>
 			<artifactId>pi4j-core</artifactId>
-			<version>0.0.5</version>
+			<version>1.2</version>
 			<scope>provided</scope>
 		</dependency>
 
